@@ -1,0 +1,30 @@
+workflow azuretest
+{
+param
+(
+    [Parameter(Mandatory=$false)]
+    [String] $resourceGroup = "acitest",
+    [String] $aciName = "acitest"
+)
+    #$Cred = Get-AzureAutomationCredential -Name "azurecredential"
+  
+   $Conn = Get-AutomationConnection -Name AzureRunAsConnection
+   Connect-AzureRmAccount -ServicePrincipal -Tenant $Conn.TenantID -ApplicationId $Conn.ApplicationID -CertificateThumbprint $Conn.CertificateThumbprint
+   #Add-AzureRMAccount -ServicePrincipal -Tenant $Conn.TenantID -ApplicationId $Conn.ApplicationID -CertificateThumbprint $Conn.CertificateThumbprint
+
+    #eger variable kullanilacaksa
+    #$VmsToCreate = Get-AzureAutomationVariable -Name "VmsToCreate"
+    #$aciList = (Get-AzureRmResource -Name "$aciName`*").Name   
+    $aciList = (Get-AzureRmContainerGroup -ResourceGroupName $resourceGroup | ? {$_.Name -like "$aciName`*"}).Name
+    #$containerCount = $aciList.Count
+
+    foreach($tempContainerName in $aciList)
+    {
+     
+        Remove-AzureRmContainerGroup -ResourceGroupName $resourceGroup -Name $tempContainerName
+        #az container stop --name $tempContainerName --resource-group $resourceGroup
+        #az container start --name $tempContainerName --resource-group $resourceGroup
+        New-AzureRmContainerGroup -ResourceGroupName $resourceGroup -Name $tempContainerName -Image hakkiogretmen/rating-api:v1 -OsType Linux -Location "westeurope" -RestartPolicy "Always" -IpAddressType Public -Port @(3000)
+    }
+    
+}
